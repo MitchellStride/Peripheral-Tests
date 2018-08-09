@@ -1,6 +1,7 @@
 #include <mbed.h>
 #include <BME280.h>
 #include <DS1820.h>
+#include <eeprom.h>
 #include <MCP23008.hpp>
 
 //Pin Assignments
@@ -32,11 +33,13 @@ CAN can1(PA_11, PA_12);
 
  //Init Serial for debug
 Serial xport(PA_2, PA_3); //Lantronix UART
+Serial RS(PC_4, PC_5); //RS232/485 connector
 
 
 
 //Devices
-//MCP23008 mcp(PB_7, PB_6, 4);
+MCP23008 mcp(PB_7, PB_6, 0x48); //try 47
+EEPROM ep(PB_7, PB_6, 0x50,EEPROM::T24C02);
 BME280 BME(PB_7, PB_6);
 DS1820  ds1820(PC_3);
 
@@ -49,9 +52,13 @@ char counter =0;
 
 //float tempLM35;
 
+
 int l1;
 int l2;
-int switchinputs = 0x00;
+uint8_t switchinputs;
+int32_t eeprom_size, max_size;
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 int main() {
     //Setup Code
@@ -61,25 +68,32 @@ int main() {
     i2c.frequency(100000);
 
     //I2C I/O EXPANDER
-    //mcp.set_input_pins(0xFF);
+    mcp.set_input_pins(0xFF);  //sets all switch inputs
+    mcp.set_pullups (0xFF);   //Sets switch positions to 1, floating is gnd
 
     while(1) {
         //Loop Code
 
-      //  switchinputs = mcp.read_inputs();
-        xport.printf("\n\rRotary Inputs:%i", switchinputs);
+        switchinputs = mcp.read_inputs();
+        xport.printf("\n\rRotary Inputs:%x", switchinputs);
         //User LEDs
         userLED1 = !userLED1;
         userLED2 = userLED1; 
-        
+
+        //EEPROM test
+       /* eeprom_size = ep.getSize();
+        max_size = MIN(eeprom_size,256);
+        xport.printf("\n\rTest EEPROM I2C model %s of %d bytes\n\n",ep.getName(),eeprom_size);
+       */
+
         //BME280
-        xport.printf("\n\r\n\r\n\rEnviromental Monitoring:\n\r");
+       // xport.printf("\n\r\n\r\n\rEnviromental Monitoring:\n\r");
         pressure = BME.getPressure();
         tempBME = BME.getTemperature();
         humidity =  BME.getHumidity();
-        xport.printf("temp:%.2fC\n\r", tempBME);
-        xport.printf("pres:%.2fkPa\n\r", pressure/1000);
-        xport.printf("humi:%.2f\n\r", humidity);
+      //  xport.printf("temp:%.2fC\n\r", tempBME);
+      //  xport.printf("pres:%.2fkPa\n\r", pressure/1000);
+      //  xport.printf("humi:%.2f\n\r", humidity);
 
         //TEMP SENSING
             /*tempLM35 = (float(LM35.read())*5/(1023))/0.01;
@@ -88,16 +102,16 @@ int main() {
             if(ds1820.begin()) {
             ds1820.startConversion();   // start temperature conversion
             //wait(1.0);                  // let DS1820 complete the temperature conversion
-            xport.printf("DS18B20 = %3.1fC\r\n", ds1820.read());     // read temperature
+      //      xport.printf("DS18B20 = %3.1fC\r\n", ds1820.read());     // read temperature
             } else {
-                 xport.printf("\n\rNo DS1820 sensor found!\r\n");
+      //           xport.printf("\n\rNo DS1820 sensor found!\r\n");
             }
 
         //LEAK SENSING
         l1 = !leak1;
         l2 = !leak2;
-        xport.printf("leak1:%i\n\r", l1);
-        xport.printf("leak2:%i\n\r", l2);
+     //   xport.printf("leak1:%i\n\r", l1);
+     //   xport.printf("leak2:%i\n\r", l2);
             //LEAK LEDS
         /*if(l1)
             userLED1 = 1;
@@ -115,7 +129,7 @@ int main() {
         //SYNC Testing
         if(!sync){
            // userLED1 = 1;
-            xport.printf("\n\rSYNC pulled LOW\r\n");
+      //      xport.printf("\n\rSYNC pulled LOW\r\n");
          } else{
            // userLED1 = 0;
            }
@@ -123,13 +137,13 @@ int main() {
         DAC1_OUT.write(0.5);
         AnaValue = P9_Ain1.read();
         wait_ms(50);
-        xport.printf("Ain1:%.2f V\n\r", AnaValue);
+     //   xport.printf("Ain1:%.2f V\n\r", AnaValue);
         AnaValue = P9_Ain2.read();
         wait_ms(50);
-        xport.printf("Ain2:%.2f V\n\r",  AnaValue);
+     //   xport.printf("Ain2:%.2f V\n\r",  AnaValue);
         AnaValue = P9_Ain3.read();
         wait_ms(50);
-        xport.printf("Ain3:%.2f V\n\r",  AnaValue);
+     //   xport.printf("Ain3:%.2f V\n\r",  AnaValue);
 
         //GPIO Isolater TEST
         SPI3_SCK = 1;
@@ -147,11 +161,11 @@ int main() {
       
 
         //CAN
-        printf("\n\rCAN MSG SENDING");
+    //    printf("\n\rCAN MSG SENDING");
     if (can1.write(CANMessage(1337, &counter, 1))) {
         counter++;
         userLED1 = 1;
-        xport.printf("     SENT%i", counter);
+    //    xport.printf("     SENT%i", counter);
         wait(0.2);
         userLED1 = 0;
     }
@@ -160,7 +174,7 @@ int main() {
         //IO
 
 
-        wait_ms(1000);
+        wait_ms(100);
     }
 }
 
