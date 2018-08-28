@@ -1,19 +1,22 @@
+
 #include <mbed.h>
 
-Serial pc(USBTX, USBRX); // tx, rx
-Serial gps_link(PA_2, PA_3); //Arduino Header CN9
+DigitalOut activityled(PC_9);
+DigitalOut userLED(PA_8);
 
-DigitalOut activityled(LED1);
+ //Init Serial for debug
+Serial xport(PA_2, PA_3); //Lantronix UART
+Serial gps_link(PA_9, PA_10);
 
 int main() {
     gps_link.baud(9600);
     while(1) {
         // put your main code here, to run repeatedly:
         if(gps_link.readable()){
-            pc.putc(gps_link.getc());
+            xport.putc(gps_link.getc());
             activityled = !activityled;
         } else {
-            pc.printf("\r\nGPS not availible");
+            xport.printf("\r\nGPS not availible");
         }
        
     }
