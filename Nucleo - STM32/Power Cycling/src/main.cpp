@@ -25,7 +25,7 @@ int main(){
     //pc.printf("Power Cycling Begin\n\r");
     wait_ms(1000);
     //Set cycles, and time intervals in ms.
-        pwrCYCLE(10, 250, 1000);
+        pwrCYCLE(5000, 250, 1000);
     while(1){
         //pc.printf("\n\n\rPower Cycling Complete!\n\r");
         relay = 0;
