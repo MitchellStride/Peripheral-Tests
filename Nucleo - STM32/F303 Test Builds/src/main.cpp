@@ -1,6 +1,6 @@
 #include <mbed.h>
 
-DigitalOut myled(LED1);
+DigitalOut myled(PA_5);
 Serial pc(USBTX, USBRX); // tx, rx
 
 int main() {
